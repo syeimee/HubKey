@@ -1,0 +1,182 @@
+{
+  "name": "hubkey",
+  "displayName": "HubKey",
+  "description": "Assign Backlog-style project keys to GitHub Issues",
+  "version": "0.1.0",
+  "publisher": "hubkey",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.hubkey.json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "hubkey-explorer",
+          "title": "HubKey",
+          "icon": "resources/icons/hubkey.svg"
+        }
+      ]
+    },
+    "views": {
+      "hubkey-explorer": [
+        {
+          "id": "hubkey.issueTree",
+          "name": "Issues",
+          "contextualTitle": "HubKey Issues"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "hubkey.createIssue",
+        "title": "HubKey: Create Issue",
+        "icon": "$(add)"
+      },
+      {
+        "command": "hubkey.editIssue",
+        "title": "HubKey: Edit Issue",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "hubkey.closeIssue",
+        "title": "HubKey: Close Issue"
+      },
+      {
+        "command": "hubkey.reopenIssue",
+        "title": "HubKey: Reopen Issue"
+      },
+      {
+        "command": "hubkey.toggleRepository",
+        "title": "HubKey: Toggle Repository Visibility",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "hubkey.searchByKey",
+        "title": "HubKey: Search by Project Key",
+        "icon": "$(search)"
+      },
+      {
+        "command": "hubkey.filterState",
+        "title": "HubKey: Filter Open/Closed",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "hubkey.refreshTree",
+        "title": "HubKey: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "hubkey.openOnGitHub",
+        "title": "HubKey: Open on GitHub",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "hubkey.initConfig",
+        "title": "HubKey: Initialize .hubkey.json"
+      },
+      {
+        "command": "hubkey.addRepository",
+        "title": "HubKey: Add Repository"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "hubkey.createIssue",
+          "when": "view == hubkey.issueTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "hubkey.searchByKey",
+          "when": "view == hubkey.issueTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "hubkey.filterState",
+          "when": "view == hubkey.issueTree",
+          "group": "navigation@3"
+        },
+        {
+          "command": "hubkey.refreshTree",
+          "when": "view == hubkey.issueTree",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "hubkey.editIssue",
+          "when": "view == hubkey.issueTree && viewItem == issue",
+          "group": "inline"
+        },
+        {
+          "command": "hubkey.openOnGitHub",
+          "when": "view == hubkey.issueTree && viewItem == issue"
+        },
+        {
+          "command": "hubkey.closeIssue",
+          "when": "view == hubkey.issueTree && viewItem == issue"
+        },
+        {
+          "command": "hubkey.reopenIssue",
+          "when": "view == hubkey.issueTree && viewItem == issue"
+        },
+        {
+          "command": "hubkey.toggleRepository",
+          "when": "view == hubkey.issueTree && viewItem == repository"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "HubKey",
+      "properties": {
+        "hubkey.auth.method": {
+          "type": "string",
+          "enum": [
+            "pat",
+            "ghCli"
+          ],
+          "default": "ghCli",
+          "description": "Authentication method: Personal Access Token or gh CLI"
+        },
+        "hubkey.defaultState": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "default": "open",
+          "description": "Default issue state filter"
+        },
+        "hubkey.fetchLimit": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of issues to fetch per repository"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/test-electron": "^2.3.0"
+  }
+}
