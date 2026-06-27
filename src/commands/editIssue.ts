@@ -27,7 +27,7 @@ export function registerEditIssueCommand(
       return;
     }
 
-    const panel = new IssueFormPanel(context.extensionUri, githubService);
+    const panel = new IssueFormPanel(githubService);
     await panel.showEditForm(issue, repoConfig, async (data) => {
       try {
         // Preserve the hubkey marker in the body
@@ -40,10 +40,10 @@ export function registerEditIssueCommand(
           body: newBody,
           labels: data.labels,
           assignees: data.assignees,
-        });
+        }, issue.apiUrl, issue.token);
 
         if (data.comment) {
-          await githubService.addComment(issue.owner, issue.repo, issue.githubNumber, data.comment);
+          await githubService.addComment(issue.owner, issue.repo, issue.githubNumber, data.comment, issue.apiUrl, issue.token);
         }
 
         vscode.window.showInformationMessage(`HubKey: Updated ${issue.fullKey}`);

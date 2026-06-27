@@ -1,9 +1,10 @@
 {
   "name": "hubkey",
   "displayName": "HubKey",
-  "description": "Assign Backlog-style project keys to GitHub Issues",
+  "description": "Assign Backlog-style project keys to GitHub/GitBucket Issues and manage them from VS Code",
   "version": "0.1.0",
   "publisher": "hubkey",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -45,12 +46,18 @@
         "icon": "$(edit)"
       },
       {
+        "command": "hubkey.showIssueDetail",
+        "title": "HubKey: Show Issue Detail"
+      },
+      {
         "command": "hubkey.closeIssue",
-        "title": "HubKey: Close Issue"
+        "title": "HubKey: Close Issue",
+        "icon": "$(close)"
       },
       {
         "command": "hubkey.reopenIssue",
-        "title": "HubKey: Reopen Issue"
+        "title": "HubKey: Reopen Issue",
+        "icon": "$(issue-reopened)"
       },
       {
         "command": "hubkey.toggleRepository",
@@ -112,20 +119,30 @@
       "view/item/context": [
         {
           "command": "hubkey.editIssue",
-          "when": "view == hubkey.issueTree && viewItem == issue",
-          "group": "inline"
-        },
-        {
-          "command": "hubkey.openOnGitHub",
-          "when": "view == hubkey.issueTree && viewItem == issue"
+          "when": "view == hubkey.issueTree && viewItem =~ /^issue/",
+          "group": "inline@1"
         },
         {
           "command": "hubkey.closeIssue",
-          "when": "view == hubkey.issueTree && viewItem == issue"
+          "when": "view == hubkey.issueTree && viewItem == issueOpen",
+          "group": "inline@2"
         },
         {
           "command": "hubkey.reopenIssue",
-          "when": "view == hubkey.issueTree && viewItem == issue"
+          "when": "view == hubkey.issueTree && viewItem == issueClosed",
+          "group": "inline@2"
+        },
+        {
+          "command": "hubkey.openOnGitHub",
+          "when": "view == hubkey.issueTree && viewItem =~ /^issue/"
+        },
+        {
+          "command": "hubkey.closeIssue",
+          "when": "view == hubkey.issueTree && viewItem == issueOpen"
+        },
+        {
+          "command": "hubkey.reopenIssue",
+          "when": "view == hubkey.issueTree && viewItem == issueClosed"
         },
         {
           "command": "hubkey.toggleRepository",

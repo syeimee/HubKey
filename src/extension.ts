@@ -10,6 +10,7 @@ import { registerEditIssueCommand } from './commands/editIssue';
 import { registerToggleRepositoryCommand } from './commands/toggleRepository';
 import { registerSearchByKeyCommand } from './commands/searchByKey';
 import { registerFilterStateCommand } from './commands/filterState';
+import { IssueDetailPanel } from './views/webview/issueDetailPanel';
 import { TREE_VIEW_ID } from './utils/constants';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -40,33 +41,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Reload tree when config changes
   configManager.onDidChange(() => treeProvider.refresh());
 
+  // Update TreeView badge when change count updates
+  const countListener = treeProvider.onDidChangeCount((count) => {
+    treeView.badge = count > 0
+      ? { value: count, tooltip: `${count} updated issue(s)` }
+      : undefined;
+  });
+
   // Register commands
   context.subscriptions.push(
     treeView,
     configManager,
+    countListener,
     registerCreateIssueCommand(context, configManager, githubService, keyService, treeProvider),
     registerEditIssueCommand(context, configManager, githubService, keyService, treeProvider),
     registerToggleRepositoryCommand(configManager, treeProvider),
     registerSearchByKeyCommand(treeProvider),
     registerFilterStateCommand(treeProvider),
-    vscode.commands.registerCommand('hubkey.refreshTree', () => treeProvider.refresh()),
+    vscode.commands.registerCommand('hubkey.refreshTree', async () => {
+      treeProvider.refresh();
+      await IssueDetailPanel.refreshAllOpenPanels();
+    }),
     vscode.commands.registerCommand('hubkey.initConfig', () => configManager.initConfig()),
     vscode.commands.registerCommand('hubkey.openOnGitHub', (item?: IssueItem) => {
       if (item) {
         vscode.env.openExternal(vscode.Uri.parse(item.issue.htmlUrl));
       }
     }),
+    vscode.commands.registerCommand('hubkey.showIssueDetail', async (item?: IssueItem) => {
+      if (!item) { return; }
+      treeProvider.markAsRead(item.issue);
+      const detailPanel = new IssueDetailPanel(githubService);
+      await detailPanel.show(item.issue, async (newState) => {
+        await githubService.updateIssue(item.issue.owner, item.issue.repo, item.issue.githubNumber, { state: newState }, item.issue.apiUrl, item.issue.token);
+        const action = newState === 'closed' ? 'Closed' : 'Reopened';
+        vscode.window.showInformationMessage(`HubKey: ${action} ${item.issue.fullKey}`);
+        treeProvider.refresh();
+      });
+    }),
     vscode.commands.registerCommand('hubkey.closeIssue', async (item?: IssueItem) => {
       if (!item) { return; }
       const issue = item.issue;
-      await githubService.updateIssue(issue.owner, issue.repo, issue.githubNumber, { state: 'closed' });
+      await githubService.updateIssue(issue.owner, issue.repo, issue.githubNumber, { state: 'closed' }, issue.apiUrl, issue.token);
       vscode.window.showInformationMessage(`HubKey: Closed ${issue.fullKey}`);
       treeProvider.refresh();
     }),
     vscode.commands.registerCommand('hubkey.reopenIssue', async (item?: IssueItem) => {
       if (!item) { return; }
       const issue = item.issue;
-      await githubService.updateIssue(issue.owner, issue.repo, issue.githubNumber, { state: 'open' });
+      await githubService.updateIssue(issue.owner, issue.repo, issue.githubNumber, { state: 'open' }, issue.apiUrl);
       vscode.window.showInformationMessage(`HubKey: Reopened ${issue.fullKey}`);
       treeProvider.refresh();
     }),

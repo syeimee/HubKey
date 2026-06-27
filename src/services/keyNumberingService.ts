@@ -12,9 +12,9 @@ export class KeyNumberingService {
     return `${owner}/${repo}`;
   }
 
-  async loadKeys(owner: string, repo: string): Promise<void> {
+  async loadKeys(owner: string, repo: string, apiUrl?: string, token?: string): Promise<void> {
     const key = this.repoKey(owner, repo);
-    const issues = await this.githubService.listAllIssues(owner, repo);
+    const issues = await this.githubService.listAllIssues(owner, repo, apiUrl, token);
     const map = new Map<number, { key: string; number: number }>();
     for (const issue of issues) {
       if (!issue.body) {
@@ -28,10 +28,10 @@ export class KeyNumberingService {
     this.cache.set(key, map);
   }
 
-  async nextNumber(owner: string, repo: string, projectKey: string): Promise<number> {
+  async nextNumber(owner: string, repo: string, projectKey: string, apiUrl?: string, token?: string): Promise<number> {
     const key = this.repoKey(owner, repo);
     if (!this.cache.has(key)) {
-      await this.loadKeys(owner, repo);
+      await this.loadKeys(owner, repo, apiUrl, token);
     }
     const map = this.cache.get(key)!;
     let max = 0;
@@ -52,7 +52,9 @@ export class KeyNumberingService {
     issues: GitHubIssueData[],
     owner: string,
     repo: string,
-    projectKey: string
+    projectKey: string,
+    apiUrl?: string,
+    token?: string
   ): HubKeyIssue[] {
     const result: HubKeyIssue[] = [];
     for (const issue of issues) {
@@ -65,9 +67,12 @@ export class KeyNumberingService {
       ).filter(Boolean);
       const assignees = issue.assignees?.map((a) => a.login) ?? [];
 
+      // Strip the [KEY-N] prefix from title for clean display
+      const cleanTitle = issue.title.replace(/^\[[A-Z][A-Z0-9_-]*-\d+\]\s*/, '');
+
       result.push({
         githubNumber: issue.number,
-        title: issue.title,
+        title: cleanTitle,
         body: issue.body ?? '',
         state: issue.state,
         labels,
@@ -78,8 +83,11 @@ export class KeyNumberingService {
         projectKey: parsed.key,
         keyNumber: parsed.number,
         fullKey: `${parsed.key}-${parsed.number}`,
+        commentCount: issue.comments ?? 0,
         owner,
         repo,
+        apiUrl,
+        token,
       });
     }
     return result.sort((a, b) => b.keyNumber - a.keyNumber);

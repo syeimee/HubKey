@@ -15,6 +15,8 @@ export class ConfigManager {
     if (!workspaceFolder) {
       return null;
     }
+    // Always set up watcher regardless of whether config exists yet
+    this.setupWatcher(workspaceFolder);
     const configUri = vscode.Uri.joinPath(workspaceFolder.uri, CONFIG_FILE_NAME);
     try {
       const data = await vscode.workspace.fs.readFile(configUri);
@@ -24,7 +26,6 @@ export class ConfigManager {
         return null;
       }
       this.config = this.normalize(raw);
-      this.setupWatcher(workspaceFolder);
       return this.config;
     } catch {
       return null;
@@ -38,6 +39,8 @@ export class ConfigManager {
         repo: r.repo,
         projectKey: r.projectKey.toUpperCase(),
         enabled: r.enabled !== false,
+        apiUrl: r.apiUrl,
+        token: r.token,
       })),
     };
   }
@@ -58,6 +61,12 @@ export class ConfigManager {
       }
       const r = entry as Record<string, unknown>;
       if (typeof r.owner !== 'string' || typeof r.repo !== 'string' || typeof r.projectKey !== 'string') {
+        return false;
+      }
+      if (r.apiUrl !== undefined && typeof r.apiUrl !== 'string') {
+        return false;
+      }
+      if (r.token !== undefined && typeof r.token !== 'string') {
         return false;
       }
       const key = r.projectKey.toUpperCase();
@@ -166,6 +175,7 @@ export class ConfigManager {
     };
     const data = Buffer.from(JSON.stringify(template, null, 2) + '\n', 'utf-8');
     await vscode.workspace.fs.writeFile(configUri, data);
+    await this.load();
     const doc = await vscode.workspace.openTextDocument(configUri);
     await vscode.window.showTextDocument(doc);
   }

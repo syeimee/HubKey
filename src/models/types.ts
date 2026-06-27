@@ -3,6 +3,8 @@ export interface RepositoryConfig {
   repo: string;
   projectKey: string;
   enabled: boolean;
+  apiUrl?: string;  // e.g. "http://localhost:8080/api/v3" for GitBucket
+  token?: string;   // Per-repository token (for GitBucket / GitHub Enterprise)
 }
 
 export interface HubKeyConfig {
@@ -24,8 +26,12 @@ export interface HubKeyIssue {
   keyNumber: number;
   fullKey: string;
 
+  commentCount: number;
+
   owner: string;
   repo: string;
+  apiUrl?: string;
+  token?: string;
 }
 
 export interface ParsedKey {

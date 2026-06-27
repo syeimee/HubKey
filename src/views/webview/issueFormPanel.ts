@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { GitHubService } from '../../services/githubService';
 import { HubKeyIssue, RepositoryConfig } from '../../models/types';
+import { getNonce } from '../../utils/nonce';
 
 type FormMode = 'create' | 'edit';
 
@@ -19,7 +20,6 @@ export class IssueFormPanel {
   private panel: vscode.WebviewPanel | undefined;
 
   constructor(
-    private readonly extensionUri: vscode.Uri,
     private readonly githubService: GitHubService
   ) {}
 
@@ -28,8 +28,8 @@ export class IssueFormPanel {
     onCreate: (data: CreatePayload) => Promise<void>
   ): Promise<void> {
     const [labels, assignees] = await Promise.all([
-      this.githubService.listLabels(repoConfig.owner, repoConfig.repo),
-      this.githubService.listAssignees(repoConfig.owner, repoConfig.repo),
+      this.githubService.listLabels(repoConfig.owner, repoConfig.repo, repoConfig.apiUrl, repoConfig.token),
+      this.githubService.listAssignees(repoConfig.owner, repoConfig.repo, repoConfig.apiUrl, repoConfig.token),
     ]);
 
     this.panel = vscode.window.createWebviewPanel(
@@ -61,8 +61,8 @@ export class IssueFormPanel {
     onEdit: (data: EditPayload) => Promise<void>
   ): Promise<void> {
     const [labels, assignees] = await Promise.all([
-      this.githubService.listLabels(repoConfig.owner, repoConfig.repo),
-      this.githubService.listAssignees(repoConfig.owner, repoConfig.repo),
+      this.githubService.listLabels(repoConfig.owner, repoConfig.repo, repoConfig.apiUrl, repoConfig.token),
+      this.githubService.listAssignees(repoConfig.owner, repoConfig.repo, repoConfig.apiUrl, repoConfig.token),
     ]);
 
     this.panel = vscode.window.createWebviewPanel(
@@ -115,10 +115,13 @@ export class IssueFormPanel {
       )
       .join('\n');
 
+    const nonce = getNonce();
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${mode === 'create' ? 'New Issue' : 'Edit Issue'}</title>
 <style>
@@ -204,7 +207,7 @@ export class IssueFormPanel {
 
   <button id="submitBtn">${mode === 'create' ? 'Create Issue' : 'Update Issue'}</button>
 
-  <script>
+  <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     document.getElementById('submitBtn').addEventListener('click', () => {
       const title = document.getElementById('title').value.trim();
@@ -226,6 +229,7 @@ export class IssueFormPanel {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

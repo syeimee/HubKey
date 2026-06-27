@@ -34,28 +34,33 @@ export function registerCreateIssueCommand(
       selectedRepo = pick.config;
     }
 
-    const panel = new IssueFormPanel(context.extensionUri, githubService);
+    const panel = new IssueFormPanel(githubService);
     await panel.showCreateForm(selectedRepo, async (data) => {
       try {
         const nextNum = await keyService.nextNumber(
           selectedRepo.owner,
           selectedRepo.repo,
-          selectedRepo.projectKey
+          selectedRepo.projectKey,
+          selectedRepo.apiUrl,
+          selectedRepo.token
         );
         const bodyWithMarker = keyService.appendMarker(
           data.body,
           selectedRepo.projectKey,
           nextNum
         );
+        const fullKey = `${selectedRepo.projectKey}-${nextNum}`;
+        const titledWithKey = `[${fullKey}] ${data.title}`;
         await githubService.createIssue(
           selectedRepo.owner,
           selectedRepo.repo,
-          data.title,
+          titledWithKey,
           bodyWithMarker,
           data.labels.length > 0 ? data.labels : undefined,
-          data.assignees.length > 0 ? data.assignees : undefined
+          data.assignees.length > 0 ? data.assignees : undefined,
+          selectedRepo.apiUrl,
+          selectedRepo.token
         );
-        const fullKey = `${selectedRepo.projectKey}-${nextNum}`;
         vscode.window.showInformationMessage(`HubKey: Created ${fullKey}: ${data.title}`);
         keyService.invalidateCache(selectedRepo.owner, selectedRepo.repo);
         treeProvider.refresh();
