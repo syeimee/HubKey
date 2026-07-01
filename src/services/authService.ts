@@ -38,12 +38,44 @@ export class AuthService {
   }
 
   private async getTokenFromGhCli(): Promise<string | null> {
-    try {
-      const { stdout } = await execFileAsync('gh', ['auth', 'token']);
-      return stdout.trim() || null;
-    } catch {
-      return null;
+    const config = vscode.workspace.getConfiguration('hubkey.auth');
+    let ghPath = config.get<string>('ghPath', '');
+
+    // 1. Try configured path or default 'gh'
+    const pathsToTry = ghPath ? [ghPath] : ['gh'];
+    for (const path of pathsToTry) {
+      try {
+        const { stdout } = await execFileAsync(path, ['auth', 'token']);
+        const token = stdout.trim();
+        if (token) {
+          return token;
+        }
+      } catch {
+        // Continue to next option
+      }
     }
+
+    // 2. If no configured path and default failed, prompt user
+    if (!ghPath) {
+      ghPath = await vscode.window.showInputBox({
+        prompt: 'gh CLI not found. Enter the full path to gh executable',
+        placeHolder: '/usr/local/bin/gh',
+        ignoreFocusOut: true,
+      }) ?? '';
+
+      if (ghPath) {
+        // Save to settings and try again
+        await config.update('ghPath', ghPath, vscode.ConfigurationTarget.Global);
+        try {
+          const { stdout } = await execFileAsync(ghPath, ['auth', 'token']);
+          return stdout.trim() || null;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
   }
 
   getToken(): string | null {

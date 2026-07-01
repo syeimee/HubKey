@@ -53,15 +53,17 @@ export class KeyNumberingService {
     owner: string,
     repo: string,
     projectKey: string,
+    keyedOnly: boolean = false,
     apiUrl?: string,
     token?: string
   ): HubKeyIssue[] {
     const result: HubKeyIssue[] = [];
     for (const issue of issues) {
       const parsed = issue.body ? parseMarkerFromBody(issue.body) : null;
-      if (!parsed || parsed.key !== projectKey) {
+      if (keyedOnly && (!parsed || parsed.key !== projectKey)) {
         continue;
       }
+      const hasKey = parsed && parsed.key === projectKey;
       const labels = issue.labels.map((l) =>
         typeof l === 'string' ? l : l.name ?? ''
       ).filter(Boolean);
@@ -80,9 +82,9 @@ export class KeyNumberingService {
         htmlUrl: issue.html_url,
         createdAt: issue.created_at,
         updatedAt: issue.updated_at,
-        projectKey: parsed.key,
-        keyNumber: parsed.number,
-        fullKey: `${parsed.key}-${parsed.number}`,
+        projectKey: hasKey ? parsed!.key : projectKey,
+        keyNumber: hasKey ? parsed!.number : 0,
+        fullKey: hasKey ? `${parsed!.key}-${parsed!.number}` : `#${issue.number}`,
         commentCount: issue.comments ?? 0,
         owner,
         repo,

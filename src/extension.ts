@@ -17,15 +17,74 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const configManager = new ConfigManager();
   const config = await configManager.load();
 
+  // Register initConfig regardless of auth status
+  context.subscriptions.push(
+    vscode.commands.registerCommand('hubkey.initConfig', async () => {
+      await configManager.initConfig();
+      // Prompt to reload after creating config
+      const selection = await vscode.window.showInformationMessage(
+        'HubKey: .hubkey.json created. Reload window to activate.',
+        'Reload Window'
+      );
+      if (selection === 'Reload Window') {
+        vscode.commands.executeCommand('workbench.action.reloadWindow');
+      }
+    })
+  );
+
+  // Check if config exists, show welcome message if not
+  if (!config) {
+    const selection = await vscode.window.showInformationMessage(
+      'HubKey: Welcome! Create .hubkey.json to get started.',
+      'Create Config',
+      'Later'
+    );
+    if (selection === 'Create Config') {
+      vscode.commands.executeCommand('hubkey.initConfig');
+    }
+    // Register placeholder commands
+    registerPlaceholderCommands(context, 'config');
+    return;
+  }
+
   const authService = new AuthService(context.secrets);
   await authService.initialize();
 
   const token = authService.getToken();
+
   if (!token) {
-    // Register init command even without auth
-    context.subscriptions.push(
-      vscode.commands.registerCommand('hubkey.initConfig', () => configManager.initConfig())
+    // Show auth setup notification
+    const selection = await vscode.window.showWarningMessage(
+      'HubKey: GitHub authentication required.',
+      'Configure gh Path',
+      'Use PAT',
+      'Open Settings'
     );
+    if (selection === 'Configure gh Path') {
+      const ghPath = await vscode.window.showInputBox({
+        prompt: 'Enter the full path to gh executable (run "which gh" in terminal to find it)',
+        placeHolder: '/usr/local/bin/gh',
+        ignoreFocusOut: true,
+      });
+      if (ghPath) {
+        await vscode.workspace.getConfiguration('hubkey.auth').update('ghPath', ghPath, vscode.ConfigurationTarget.Global);
+        const reload = await vscode.window.showInformationMessage(
+          'HubKey: gh path saved. Reload to apply.',
+          'Reload Window'
+        );
+        if (reload === 'Reload Window') {
+          vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+      }
+    } else if (selection === 'Use PAT') {
+      await vscode.workspace.getConfiguration('hubkey.auth').update('method', 'pat', vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage('HubKey: Switched to PAT mode. Reload to enter token.');
+      vscode.commands.executeCommand('workbench.action.reloadWindow');
+    } else if (selection === 'Open Settings') {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'hubkey.auth');
+    }
+
+    registerPlaceholderCommands(context, 'auth');
     return;
   }
 
@@ -62,7 +121,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       treeProvider.refresh();
       await IssueDetailPanel.refreshAllOpenPanels();
     }),
-    vscode.commands.registerCommand('hubkey.initConfig', () => configManager.initConfig()),
     vscode.commands.registerCommand('hubkey.openOnGitHub', (item?: IssueItem) => {
       if (item) {
         vscode.env.openExternal(vscode.Uri.parse(item.issue.htmlUrl));
@@ -114,3 +172,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export function deactivate(): void {}
+
+function registerPlaceholderCommands(context: vscode.ExtensionContext, reason: 'config' | 'auth'): void {
+  const handler = () => {
+    if (reason === 'config') {
+      vscode.window.showWarningMessage(
+        'HubKey: Please create .hubkey.json first.',
+        'Create Config'
+      ).then(selection => {
+        if (selection === 'Create Config') {
+          vscode.commands.executeCommand('hubkey.initConfig');
+        }
+      });
+    } else {
+      vscode.window.showWarningMessage(
+        'HubKey: Authentication required.',
+        'Open Settings'
+      ).then(selection => {
+        if (selection === 'Open Settings') {
+          vscode.commands.executeCommand('workbench.action.openSettings', 'hubkey.auth');
+        }
+      });
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('hubkey.refreshTree', handler),
+    vscode.commands.registerCommand('hubkey.createIssue', handler),
+    vscode.commands.registerCommand('hubkey.editIssue', handler),
+    vscode.commands.registerCommand('hubkey.closeIssue', handler),
+    vscode.commands.registerCommand('hubkey.reopenIssue', handler),
+    vscode.commands.registerCommand('hubkey.toggleRepository', handler),
+    vscode.commands.registerCommand('hubkey.searchByKey', handler),
+    vscode.commands.registerCommand('hubkey.filterState', handler),
+    vscode.commands.registerCommand('hubkey.openOnGitHub', handler),
+    vscode.commands.registerCommand('hubkey.showIssueDetail', handler),
+    vscode.commands.registerCommand('hubkey.addRepository', handler),
+  );
+}

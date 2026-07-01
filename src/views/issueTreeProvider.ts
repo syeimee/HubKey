@@ -67,7 +67,8 @@ export class IssueTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     try {
       const fetchLimit = vscode.workspace.getConfiguration('hubkey').get<number>('fetchLimit', 100);
       const issues = await this.githubService.listIssues(owner, repo, this.stateFilter, fetchLimit, apiUrl, token);
-      const resolved = this.keyService.resolveIssues(issues, owner, repo, projectKey, apiUrl, token);
+      const keyedOnly = vscode.workspace.getConfiguration('hubkey').get<boolean>('keyedOnly', false);
+      const resolved = this.keyService.resolveIssues(issues, owner, repo, projectKey, keyedOnly, apiUrl, token);
 
       // Detect changes
       for (const issue of resolved) {

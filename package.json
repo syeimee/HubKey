@@ -12,7 +12,10 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:.hubkey.json"
+    "workspaceContains:.hubkey.json",
+    "onCommand:hubkey.initConfig",
+    "onCommand:hubkey.refreshTree",
+    "onView:hubkey.issueTree"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -162,6 +165,11 @@
           "default": "ghCli",
           "description": "Authentication method: Personal Access Token or gh CLI"
         },
+        "hubkey.auth.ghPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to gh CLI executable (leave empty to use PATH or be prompted)"
+        },
         "hubkey.defaultState": {
           "type": "string",
           "enum": [
@@ -176,6 +184,11 @@
           "type": "number",
           "default": 100,
           "description": "Maximum number of issues to fetch per repository"
+        },
+        "hubkey.keyedOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, only show issues that have a HubKey marker. When false (default), show all issues."
         }
       }
     }
@@ -191,9 +204,10 @@
     "@octokit/rest": "^21.0.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.3.0",
-    "@vscode/test-electron": "^2.3.0"
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.3.0"
   }
 }
